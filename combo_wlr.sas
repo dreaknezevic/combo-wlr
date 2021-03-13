@@ -27,6 +27,7 @@
 *   Output datasets:
 *      counts    Number of events per group (to check for over-stratification)
 *      FH		 Results of the selected weighted log-rank tests
+*	   corr      Correlation matrix
 *	   maxcombo	 MaxCombo test p-value
 *
 *   EXAMPLES: %combo_wlr(data = patients, 
@@ -307,43 +308,8 @@ proc iml;
    end;
    return( X ); /* X is positive semidefinite */
  finish;
- **************************************************************;
 
- use fh; read all var{"z"} into z;
-         read all var{"var"} into var; close fh;
- use covar; read all var{"var"} into covar; close covar;
-
- cov = j(nrow(var), nrow(var), 0);
- cov[loc(row(cov) < col(cov))] = covar;
- 
- cov = cov + cov`;
- cov[loc(row(cov) = col(cov))] = var; 
-
- zmax = max(abs(z)); 
- corr = cov2corr(cov); print corr;
-
- * Calculate nearest positive 
-   semidefinite correlation matrix ;
- corr2 = nearestcorr(corr);
-
- create zmax from zmax; 
-  append from zmax; 
- close zmax;
-
-*******************************************************;
- %put Calculating p-value...;
-
- k = nrow(z);
- %if &estim. = "sim" %then %do;
-   nsim = &nsim.; 
-   mean = repeat(0,k)`;
-   call randseed(1);
-   x = RANDNORMAL(nsim, mean, corr2);
-   create test from x;
-    append from x;
-   close test;
- %end;
- %else %if &estim. = "GB" %then %do;
+ /*Genz-Bretz algorithm functions and constants*/
    START MVN_DIST( N, LOWER, UPPER, INFIN, COVAR, MAXPTS, ABSEPS, RELEPS,   ERROR, VALUE, NEVALS, INFORM );
       NEVALS = 0;
       RUN MVNDNT( N, COVAR, LOWER, UPPER, INFIN,   INFIS, VALUE, ERROR, INFORM );
@@ -840,17 +806,53 @@ proc iml;
       165843 90647 59925 189541 67647 74795 68365 167485 143918 74912 167289 75517 8148 172106 126159 35867 35867 35867 121694 ,
       130365 236711 110235 125699 56483 93735 234469 60549 1291 93937 245291 196061 258647 162489 176631 204895 73353 172319 28881};
 
+ **************************************************************;
+
+ use fh; read all var{"z"} into z;
+         read all var{"var"} into var; close fh;
+ use covar; read all var{"var"} into covar; close covar;
+
+ cov = j(nrow(var), nrow(var), 0);
+ cov[loc(row(cov) < col(cov))] = covar;
+ 
+ cov = cov + cov`;
+ cov[loc(row(cov) = col(cov))] = var; 
+
+ zmax = max(abs(z)); 
+ corr = cov2corr(cov); print corr;
+
+ create zmax from zmax; 
+  append from zmax; 
+ close zmax;
+
+ create corr from corr;
+  append from corr;
+ close corr;
+
+*******************************************************;
+ %put Calculating p-value...;
+
+ k = nrow(z);
+ %if &estim. = "sim" %then %do;
+   * Calculate nearest positive 
+     semidefinite correlation matrix ;
+   corr2 = nearestcorr(corr);
+   nsim = &nsim.; 
+   mean = repeat(0,k)`;
+   call randseed(1);
+   x = RANDNORMAL(nsim, mean, corr2);
+   create test from x;
+    append from x;
+   close test;
+ %end;
+ %else %if &estim. = "GB" %then %do;
    LOWER = J(1,k,-zmax);
    UPPER = J(1,k,zmax);
    INFIN = J(1,k,2);
-   COVAR = corr2;
-
    MAXPTS = &maxpts.;
    ABSEPS = &abseps.;
    RELEPS = 0;
-
-   RUN MVN_DIST( k, LOWER, UPPER, INFIN, COVAR, MAXPTS, ABSEPS, RELEPS,  ERROR, VALUE, NEVALS, INFORM );
-
+   RUN MVN_DIST( k, LOWER, UPPER, INFIN, corr, MAXPTS, ABSEPS, RELEPS,  ERROR, VALUE, NEVALS, INFORM );
    pval = (1 - value);
    create test var {"pval" "error" "nevals"};
     append;
@@ -931,7 +933,13 @@ proc print data=fh noobs label;
 run;
 
 %if &count>1 %then %do;
-  *ods html options(pagebreak='no');
+  title h=10pt "Correlation between weighted log-rank tests"; 
+  proc print data=corr noobs;* label; 
+*   var test z probchisq; 
+*   label test="Test" z="Z statistic" probchisq="P"; 
+  run;
+
+*ods html options(pagebreak='no');
   title h=10pt "Combination test";
   %if &strata. ne %then %do;
     title2 h=10pt "Stratified by &strata.";
