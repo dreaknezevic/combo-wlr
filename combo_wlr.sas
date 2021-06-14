@@ -20,15 +20,15 @@
 *      weights=  list of G(rho,gamma) weights, where rho>0, gamma>0
 *                passed as: %str(rho1,gamma1 rho2,gamma2 ... )
 *                default combination is: G(0,0), G(1,0), G(0,1), G(1,1)
-*	   abseps=   Genz-Bretz algorithm precision paramater
+*.     abseps=   Genz-Bretz algorithm precision paramater
 *      maxpts=   Genz-Bretz algorithm precision paramater
-*	   nsim=	 number of simulations to use for p-value estimate
+*.     nsim=	 number of simulations to use for p-value estimate
 *
 *   Output datasets:
 *      counts    Number of events per group (to check for over-stratification)
-*      FH		 Results of the selected weighted log-rank tests
-*	   corr      Correlation matrix
-*	   maxcombo	 MaxCombo test p-value
+*      FH        Results of the selected weighted log-rank tests
+*.     corr      Correlation matrix
+*.     maxcombo	 MaxCombo test p-value
 *
 *   EXAMPLES: %combo_wlr(data = patients, 
 *                        group = treatment, 
@@ -52,7 +52,7 @@
 *   Acknowledgements:
 *      Code for computing the nearest correlation matrix from The DO Loop blog by Rick Wicklin: 
 *      https://blogs.sas.com/content/iml/2012/11/28/computing-the-nearest-correlation-matrix.html
-*	   Code for Genz-Bretz algorithm for estimating the multivariate normal probability 
+*.     Code for Genz-Bretz algorithm for estimating the multivariate normal probability 
 *      by Katherine Cai adapted from Genz and Bretz, from:
 *      http://www.public.asu.edu/~jeffreyw/GMM/%25MVINTEGRATION%20Macro.sas
 *
